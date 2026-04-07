@@ -40,7 +40,7 @@ function renderProducts(meta) {
         <p>${formatPrice(item.price)} · ${statusText(item)}</p>
       </div>
       <div class="admin-actions admin-actions--inline">
-        <button class="btn" type="button" disabled>Редагування буде на наступному кроці</button>
+        <button class="btn" type="button" disabled>Підключимо редагування після імпорту всіх товарів</button>
       </div>
     </div>
   `).join('');
