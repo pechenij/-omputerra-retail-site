@@ -311,18 +311,18 @@ function renderDealers() {
     return;
   }
   list.innerHTML = dealers.map(item => `
-    <div class="admin-item ${item.isActive ? '' : 'is-sheet-hidden'}">
-      <div class="admin-item-main">
+    <article class="dealer-admin-card ${item.isActive ? '' : 'is-sheet-hidden'}">
+      <div class="dealer-admin-card__body">
         <h3>${item.name}</h3>
-        <p>Логін: ${item.login}</p>
-        <p>${item.isActive ? 'активний' : 'вимкнений'}</p>
+        <p class="dealer-admin-card__meta">Логін: ${item.login}</p>
+        <p class="dealer-admin-card__state">${item.isActive ? 'активний' : 'вимкнений'}</p>
       </div>
-      <div class="admin-actions admin-actions--inline">
-        <button class="btn" type="button" data-focus-dealer-id="${item.id}">Показати колонку</button>
+      <div class="dealer-admin-card__actions">
+        <button class="btn" type="button" data-focus-dealer-id="${item.id}">Колонка</button>
         <button class="btn primary" type="button" data-edit-dealer-id="${item.id}">Редагувати</button>
         <button class="btn" type="button" data-delete-dealer-id="${item.id}">Видалити</button>
       </div>
-    </div>
+    </article>
   `).join('');
 
   list.querySelectorAll('[data-edit-dealer-id]').forEach(btn => {

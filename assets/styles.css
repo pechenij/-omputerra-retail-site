@@ -472,53 +472,71 @@ body.admin-page .admin-category-strip .category-pill {
   .dealer-matrix-cell input{min-height:36px;padding:7px 8px}
 }
 
-
-/* v32 compact dealer cards */
+/* v33 compact dealer cards */
 [data-dealer-list].admin-list{
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:12px !important;
 }
-[data-dealer-list] .admin-item{
-  grid-template-columns:minmax(0,1fr) 170px;
+.dealer-admin-card{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
   gap:10px;
-  padding:14px 16px;
-  align-items:start;
-  border-radius:20px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fcfcfd;
+  min-width:0;
 }
-[data-dealer-list] .admin-item-main h3{
-  font-size:16px;
+.dealer-admin-card.is-sheet-hidden{
+  background:#fffdf7;
+  border-color:#eadfb1;
+}
+.dealer-admin-card__body{
+  min-width:0;
+}
+.dealer-admin-card__body h3{
   margin:0 0 6px;
+  font-size:16px;
   line-height:1.2;
 }
-[data-dealer-list] .admin-item-main p{
+.dealer-admin-card__meta,
+.dealer-admin-card__state{
+  margin:0;
   font-size:13px;
-  line-height:1.4;
+  line-height:1.35;
+  color:var(--muted);
+  overflow-wrap:anywhere;
 }
-[data-dealer-list] .admin-actions--inline{
+.dealer-admin-card__actions{
+  display:grid;
+  grid-template-columns:1fr;
   gap:8px;
-  width:170px;
 }
-[data-dealer-list] .admin-actions--inline .btn{
+.dealer-admin-card__actions .btn{
   width:100%;
   min-height:40px;
-  padding:0 12px;
+  padding:0 10px;
   font-size:14px;
 }
 @media (max-width: 1280px){
-  [data-dealer-list].admin-list{grid-template-columns:repeat(2,minmax(0,1fr));}
+  [data-dealer-list].admin-list{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
 }
 @media (max-width: 760px){
-  [data-dealer-list].admin-list{grid-template-columns:1fr;}
-  [data-dealer-list] .admin-item{
-    grid-template-columns:1fr;
+  [data-dealer-list].admin-list{
+    grid-template-columns:1fr !important;
+    gap:10px !important;
+  }
+  .dealer-admin-card{
     padding:12px;
     gap:10px;
   }
-  [data-dealer-list] .admin-actions--inline{
-    width:100%;
+  .dealer-admin-card__actions{
     grid-template-columns:1fr 1fr 1fr;
   }
-  [data-dealer-list] .admin-actions--inline .btn{
+  .dealer-admin-card__actions .btn{
     min-height:40px;
     font-size:13px;
     padding:0 8px;
