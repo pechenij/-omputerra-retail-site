@@ -10,6 +10,8 @@ let currentDealerId = null;
 let currentDealerEditId = null;
 let activeCategory = CATEGORY_ALL;
 let authSession = null;
+let dealersReady = true;
+let dealerPricesReady = true;
 
 function getConfig() {
   return window.KOMPUTERRA_SUPABASE_CONFIG || { url: '', anonKey: '', table: 'products' };
@@ -54,6 +56,20 @@ function saveDealerFeedback(text, isError = false) {
   if (!node) return;
   node.textContent = text || '';
   node.style.color = isError ? '#b42318' : '';
+}
+
+function renderDealerSetupNotice(message) {
+  const list = document.querySelector('[data-dealer-list]');
+  if (!list) return;
+  list.innerHTML = `<div class="admin-empty admin-warning"><p>${message}</p></div>`;
+}
+
+function renderDealerPricesSetupNotice(message) {
+  const list = document.querySelector('[data-dealer-prices-list]');
+  if (!list) return;
+  list.innerHTML = `<div class="admin-empty admin-warning"><p>${message}</p></div>`;
+  const saveBtn = document.querySelector('[data-save-dealer-prices]');
+  if (saveBtn) saveBtn.disabled = true;
 }
 
 function toProductPayload(form) {
@@ -268,6 +284,10 @@ function renderProducts() {
 
 function renderDealers() {
   const list = document.querySelector('[data-dealer-list]');
+  if (!dealersReady) {
+    renderDealerSetupNotice('Таблиця дилерів ще не підключена. Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase, а потім онови сторінку.');
+    return;
+  }
   if (!dealers.length) {
     list.innerHTML = '<div class="admin-empty"><p>Дилерів поки немає.</p></div>';
     return;
@@ -307,6 +327,10 @@ function renderDealerPrices() {
   const subtitle = document.querySelector('[data-price-panel-subtitle]');
   const list = document.querySelector('[data-dealer-prices-list]');
   const saveBtn = document.querySelector('[data-save-dealer-prices]');
+  if (!dealerPricesReady || !dealersReady) {
+    renderDealerPricesSetupNotice('Щоб керувати дилерськими цінами, спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
+    return;
+  }
   if (!currentDealerId) {
     title.textContent = 'Оберіть дилера';
     subtitle.textContent = 'Для товарів без індивідуальної ціни дилер побачить роздрібну ціну.';
@@ -382,20 +406,34 @@ async function loadProducts() {
 }
 
 async function loadDealers() {
-  const rows = await fetchRows('dealers', (p) => {
-    p.set('select', 'id,name,login,password,is_active,created_at');
-    p.set('order', 'name.asc');
-  });
-  dealers = rows.map(mapDealer);
-  renderDealers();
+  try {
+    const rows = await fetchRows('dealers', (p) => {
+      p.set('select', 'id,name,login,password,is_active,created_at');
+      p.set('order', 'name.asc');
+    });
+    dealersReady = true;
+    dealers = rows.map(mapDealer);
+    renderDealers();
+  } catch (error) {
+    dealersReady = false;
+    dealers = [];
+    renderDealerSetupNotice('Таблиця дилерів ще не підключена. Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase, а потім онови сторінку.');
+  }
 }
 
 async function loadDealerPrices() {
-  const rows = await fetchRows('dealer_prices', (p) => {
-    p.set('select', 'id,dealer_id,product_id,dealer_price');
-  });
-  dealerPrices = rows.map(mapDealerPrice);
-  renderDealerPrices();
+  try {
+    const rows = await fetchRows('dealer_prices', (p) => {
+      p.set('select', 'id,dealer_id,product_id,dealer_price');
+    });
+    dealerPricesReady = true;
+    dealerPrices = rows.map(mapDealerPrice);
+    renderDealerPrices();
+  } catch (error) {
+    dealerPricesReady = false;
+    dealerPrices = [];
+    renderDealerPricesSetupNotice('Таблиця дилерських цін ще не підключена. Після запуску SUPABASE-DEALERS-SETUP.sql цей блок запрацює автоматично.');
+  }
 }
 
 async function patchRow(table, id, payload) {
@@ -476,6 +514,10 @@ async function handleDealerSave(e) {
   e.preventDefault();
   const form = e.currentTarget;
   const payload = toDealerPayload(form);
+  if (!dealersReady) {
+    saveDealerFeedback('Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.', true);
+    return;
+  }
   if (!payload.name || !payload.login || !payload.password) {
     saveDealerFeedback("Заповни ім'я, логін і пароль.", true);
     return;
@@ -498,6 +540,10 @@ async function handleDealerSave(e) {
 }
 
 async function saveDealerPrices() {
+  if (!dealerPricesReady || !dealersReady) {
+    alert('Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
+    return;
+  }
   if (!currentDealerId) return;
   const inputs = [...document.querySelectorAll('[data-dealer-price-input]')];
   const existing = dealerPrices.filter(x => x.dealerId === currentDealerId);
@@ -540,7 +586,9 @@ function togglePanel(isOpen) {
 
 async function afterLogin() {
   togglePanel(true);
-  await Promise.all([loadProducts(), loadDealers(), loadDealerPrices()]);
+  await loadProducts();
+  await loadDealers();
+  await loadDealerPrices();
   resetProductForm();
   resetDealerForm();
 }
@@ -556,7 +604,9 @@ async function tryRestoreSession() {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return false;
     authSession = JSON.parse(raw);
-    await Promise.all([loadProducts(), loadDealers(), loadDealerPrices()]);
+    await loadProducts();
+    await loadDealers();
+    await loadDealerPrices();
     togglePanel(true);
     return true;
   } catch (error) {

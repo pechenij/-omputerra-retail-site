@@ -400,10 +400,23 @@ body.admin-page .admin-category-strip .category-pill {
 /* v27 dealer portal */
 .header-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}
 .header-login-btn{
-  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;
-  border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:700;box-shadow:0 8px 20px rgba(0,0,0,.05)
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 18px;
+  border-radius:999px;border:1px solid rgba(15,23,42,.09);
+  background:linear-gradient(180deg,#ffffff 0%,#f6f7fb 100%);
+  font-weight:800;letter-spacing:.01em;color:#111827;
+  box-shadow:0 10px 28px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.9);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
 }
-.header-login-btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(0,0,0,.08)}
+.header-login-btn__icon{
+  width:24px;height:24px;border-radius:999px;flex:0 0 24px;
+  border:1px solid rgba(17,24,39,.08);
+  background:radial-gradient(circle at 50% 34%, #d9f24b 0 24%, transparent 25%),
+             radial-gradient(circle at 50% 86%, #d9f24b 0 38%, transparent 39%),
+             linear-gradient(180deg,#fefefe 0%,#f3f4f6 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+.header-login-btn:hover{transform:translateY(-1px);border-color:rgba(177,196,19,.5);box-shadow:0 14px 30px rgba(15,23,42,.12)}
+.header-login-btn--ghost{background:#fff;border-color:var(--line)}
 .dealer-chip{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:999px;background:#f3f4f6;border:1px solid var(--line);font-weight:700;color:#4b5563}
 .dealer-own-price{color:#1d1d1f}
 .dealer-retail-price{font-size:16px;font-weight:600;color:var(--muted)}
@@ -417,9 +430,13 @@ body.admin-page .admin-category-strip .category-pill {
 .dealer-price-row input{min-height:42px}
 .admin-subtitle{margin:10px 0 0;color:var(--muted);font-size:14px}
 .admin-grid.admin-grid--full{grid-template-columns:1fr}
+.admin-quick-nav{display:flex;flex-wrap:wrap;gap:10px}
+.admin-quick-nav-panel .category-pill{text-decoration:none}
+.admin-warning{background:#fffdf7;border:1px solid #eadfb1;color:#6b5f2b}
 @media (max-width:760px){
   .site-header .brand-copy .page-title{display:none}
-  .header-login-btn{min-height:40px;padding:0 14px;font-size:14px}
+  .header-login-btn{min-height:40px;padding:0 14px;font-size:14px;gap:8px}
+  .header-login-btn__icon{width:22px;height:22px;flex-basis:22px}
   .dealer-chip{display:none}
   .header-actions{gap:8px}
   .dealer-price-row{grid-template-columns:1fr;gap:8px}
