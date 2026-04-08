@@ -43,10 +43,10 @@
       <div class="panel-card admin-quick-nav-panel" style="margin-bottom:18px">
         <div class="admin-quick-nav">
           <a class="category-pill is-active" href="#dealer-editor">Дилери</a>
-          <a class="category-pill" href="#dealer-prices-panel">Дилерські ціни</a>
+          <a class="category-pill" href="#dealer-prices-panel">Матриця цін</a>
           <a class="category-pill" href="#product-editor">Товари</a>
         </div>
-        <p class="note" style="margin:14px 0 0">Спочатку додай дилера, потім відкрий його блок «Ціни» та задай індивідуальні ціни. Якщо таблиці дилерів у Supabase ще не створені, виконай файл <strong>SUPABASE-DEALERS-SETUP.sql</strong>.</p>
+        <p class="note" style="margin:14px 0 0">Нижче — компактна матриця: один рядок = один товар, окремі стовпці = окремі дилери. Порожня клітинка означає, що дилер побачить роздрібну ціну. Якщо таблиці дилерів у Supabase ще не створені, виконай файл <strong>SUPABASE-DEALERS-SETUP.sql</strong>.</p>
       </div>
 
       <div class="admin-grid" style="margin-top:18px">
@@ -79,13 +79,14 @@
       <div class="admin-grid admin-grid--full" style="margin-top:18px">
         <div class="panel-card dealer-prices-panel" id="dealer-prices-panel">
           <span class="kicker">Дилерські ціни</span>
-          <h2 style="margin:8px 0 6px" data-price-panel-title>Оберіть дилера</h2>
-          <p class="admin-subtitle" data-price-panel-subtitle>Для товарів без індивідуальної ціни дилер побачить роздрібну ціну.</p>
+          <h2 style="margin:8px 0 6px" data-price-panel-title>Матриця дилерських цін</h2>
+          <p class="admin-subtitle" data-price-panel-subtitle>Один рядок = один товар. Порожня клітинка = дилер бачить роздрібну ціну.</p>
+          <div class="category-strip admin-category-strip dealer-matrix-category-strip" data-dealer-matrix-categories></div>
           <div class="admin-actions" style="margin-top:14px;margin-bottom:10px">
-            <button class="btn primary" type="button" data-save-dealer-prices disabled>Зберегти ціни</button>
+            <button class="btn primary" type="button" data-save-dealer-prices disabled>Зберегти матрицю цін</button>
           </div>
-          <div class="admin-list" data-dealer-prices-list>
-            <div class="admin-empty"><p>Оберіть дилера у списку праворуч, щоб задати індивідуальні ціни.</p></div>
+          <div class="dealer-matrix-wrap" data-dealer-prices-list>
+            <div class="admin-empty"><p>Додай хоча б одного дилера, щоб побачити матрицю цін.</p></div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ let currentEditId = null;
 let currentDealerId = null;
 let currentDealerEditId = null;
 let activeCategory = CATEGORY_ALL;
+let activeDealerMatrixCategory = CATEGORY_ALL;
 let authSession = null;
 let dealersReady = true;
 let dealerPricesReady = true;
@@ -229,6 +230,26 @@ function getVisibleProducts() {
   return products.filter(item => activeCategory === CATEGORY_ALL || item.category === activeCategory);
 }
 
+function getVisibleMatrixProducts() {
+  return products.filter(item => activeDealerMatrixCategory === CATEGORY_ALL || item.category === activeDealerMatrixCategory);
+}
+
+function renderDealerMatrixCategories() {
+  const node = document.querySelector('[data-dealer-matrix-categories]');
+  if (!node) return;
+  const categories = [CATEGORY_ALL, ...new Set(products.map(item => item.category).filter(Boolean))];
+  node.innerHTML = categories.map(category => `
+    <button class="category-pill ${category === activeDealerMatrixCategory ? 'is-active' : ''}" type="button" data-matrix-category="${category}">${category}</button>
+  `).join('');
+  node.querySelectorAll('[data-matrix-category]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeDealerMatrixCategory = btn.dataset.matrixCategory;
+      renderDealerMatrixCategories();
+      renderDealerPrices();
+    });
+  });
+}
+
 function renderProducts() {
   const list = document.querySelector('[data-product-list]');
   const visible = getVisibleProducts();
@@ -300,7 +321,7 @@ function renderDealers() {
         <p>${item.isActive ? 'активний' : 'вимкнений'}</p>
       </div>
       <div class="admin-actions admin-actions--inline">
-        <button class="btn" type="button" data-prices-id="${item.id}">Ціни</button>
+        <button class="btn" type="button" data-focus-dealer-id="${item.id}">Показати колонку</button>
         <button class="btn primary" type="button" data-edit-dealer-id="${item.id}">Редагувати</button>
       </div>
     </div>
@@ -313,11 +334,16 @@ function renderDealers() {
     });
   });
 
-  list.querySelectorAll('[data-prices-id]').forEach(btn => {
+  list.querySelectorAll('[data-focus-dealer-id]').forEach(btn => {
     btn.addEventListener('click', () => {
-      currentDealerId = btn.dataset.pricesId;
-      renderDealerPrices();
+      const dealerId = btn.dataset.focusDealerId;
+      const cell = document.querySelector(`[data-dealer-column="${dealerId}"]`);
       document.querySelector('.dealer-prices-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (cell) {
+        cell.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        cell.classList.add('dealer-matrix-flash');
+        setTimeout(() => cell.classList.remove('dealer-matrix-flash'), 1400);
+      }
     });
   });
 }
@@ -331,27 +357,77 @@ function renderDealerPrices() {
     renderDealerPricesSetupNotice('Щоб керувати дилерськими цінами, спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
     return;
   }
-  if (!currentDealerId) {
-    title.textContent = 'Оберіть дилера';
-    subtitle.textContent = 'Для товарів без індивідуальної ціни дилер побачить роздрібну ціну.';
-    list.innerHTML = '<div class="admin-empty"><p>Оберіть дилера у списку праворуч, щоб задати індивідуальні ціни.</p></div>';
+  if (!dealers.length) {
+    title.textContent = 'Матриця дилерських цін';
+    subtitle.textContent = 'Спочатку додай хоча б одного дилера — тоді тут з’являться колонки з цінами.';
+    list.innerHTML = '<div class="admin-empty"><p>Додай хоча б одного дилера, щоб побачити матрицю цін.</p></div>';
     saveBtn.disabled = true;
     return;
   }
-  const dealer = dealers.find(d => d.id === currentDealerId);
-  const map = new Map(dealerPrices.filter(x => x.dealerId === currentDealerId).map(x => [x.productId, x.dealerPrice]));
-  title.textContent = `Ціни дилера: ${dealer?.name || ''}`;
-  subtitle.textContent = `Логін дилера: ${dealer?.login || ''}. Порожнє поле = дилер бачить роздрібну ціну.`;
-  list.innerHTML = products.map(item => `
-    <div class="dealer-price-row">
-      <div>
-        <div class="dealer-price-name">${item.name}</div>
-        <div class="dealer-price-meta">${item.category} · Роздріб: ${formatPrice(item.price)}</div>
-      </div>
-      <div class="note">Роздріб: <strong>${formatPrice(item.price)}</strong></div>
-      <div><input type="number" min="0" step="1" data-dealer-price-input data-product-id="${item.id}" value="${map.has(item.id) ? map.get(item.id) : ''}" placeholder="роздрібна"></div>
-    </div>
+  const visibleProducts = getVisibleMatrixProducts();
+  if (!visibleProducts.length) {
+    list.innerHTML = '<div class="admin-empty"><p>У цій категорії поки немає товарів.</p></div>';
+    saveBtn.disabled = true;
+    return;
+  }
+  title.textContent = 'Матриця дилерських цін';
+  subtitle.textContent = 'Порожня клітинка = дилер бачить роздрібну ціну. Усі ціни видно в одній таблиці.';
+  const map = new Map(dealerPrices.map(x => [`${x.dealerId}::${x.productId}`, x.dealerPrice]));
+
+  const headDealers = dealers.map(d => `
+    <th class="dealer-matrix-col-head" data-dealer-column="${d.id}">
+      <div>${d.name}</div>
+      <small>${d.login}</small>
+    </th>
   `).join('');
+
+  const rows = visibleProducts.map(item => {
+    const cells = dealers.map(d => {
+      const key = `${d.id}::${item.id}`;
+      const value = map.has(key) ? map.get(key) : '';
+      return `
+        <td class="dealer-matrix-cell" data-dealer-column="${d.id}">
+          <input
+            type="number"
+            min="0"
+            step="1"
+            data-dealer-price-input
+            data-dealer-id="${d.id}"
+            data-product-id="${item.id}"
+            value="${value}"
+            placeholder="${item.price}"
+            aria-label="${d.name} — ${item.name}"
+          >
+        </td>
+      `;
+    }).join('');
+
+    return `
+      <tr>
+        <td class="dealer-matrix-product">
+          <div class="dealer-matrix-name">${item.name}</div>
+          <div class="dealer-matrix-meta">${item.category}${item.model ? ` · ${item.model}` : ''}</div>
+        </td>
+        <td class="dealer-matrix-retail">${formatPrice(item.price)}</td>
+        ${cells}
+      </tr>
+    `;
+  }).join('');
+
+  list.innerHTML = `
+    <div class="dealer-matrix-scroll">
+      <table class="dealer-matrix-table">
+        <thead>
+          <tr>
+            <th class="dealer-matrix-sticky-col">Товар</th>
+            <th class="dealer-matrix-sticky-retail">Роздріб</th>
+            ${headDealers}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
   saveBtn.disabled = false;
 }
 
@@ -402,6 +478,7 @@ async function loadProducts() {
   });
   products = rows.map(mapProduct);
   renderCategories();
+  renderDealerMatrixCategories();
   renderProducts();
 }
 
@@ -544,38 +621,41 @@ async function saveDealerPrices() {
     alert('Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
     return;
   }
-  if (!currentDealerId) return;
+  if (!dealers.length) return;
   const inputs = [...document.querySelectorAll('[data-dealer-price-input]')];
-  const existing = dealerPrices.filter(x => x.dealerId === currentDealerId);
-  const existingMap = new Map(existing.map(x => [x.productId, x]));
+  const existingMap = new Map(dealerPrices.map(x => [`${x.dealerId}::${x.productId}`, x]));
   const upserts = [];
   const deletes = [];
+
   inputs.forEach(input => {
+    const dealerId = input.dataset.dealerId;
     const productId = input.dataset.productId;
     const raw = String(input.value || '').trim();
+    const key = `${dealerId}::${productId}`;
     if (!raw) {
-      if (existingMap.has(productId)) deletes.push(productId);
+      if (existingMap.has(key)) deletes.push({ dealerId, productId });
       return;
     }
     upserts.push({
-      dealer_id: currentDealerId,
+      dealer_id: dealerId,
       product_id: productId,
       dealer_price: Number(raw)
     });
   });
+
   const btn = document.querySelector('[data-save-dealer-prices]');
   btn.textContent = 'Зберігаємо...';
   try {
     if (upserts.length) await upsertRows('dealer_prices', upserts);
-    for (const productId of deletes) {
-      await deleteDealerPrice(currentDealerId, productId);
+    for (const row of deletes) {
+      await deleteDealerPrice(row.dealerId, row.productId);
     }
     await loadDealerPrices();
-    btn.textContent = 'Зберегти ціни';
-    alert('Дилерські ціни оновлено.');
+    btn.textContent = 'Зберегти матрицю цін';
+    alert('Матрицю дилерських цін оновлено.');
   } catch (error) {
-    btn.textContent = 'Зберегти ціни';
-    alert('Не вдалося зберегти ціни: ' + error.message);
+    btn.textContent = 'Зберегти матрицю цін';
+    alert('Не вдалося зберегти матрицю: ' + error.message);
   }
 }
 

@@ -441,3 +441,33 @@ body.admin-page .admin-category-strip .category-pill {
   .header-actions{gap:8px}
   .dealer-price-row{grid-template-columns:1fr;gap:8px}
 }
+
+/* v29 dealer matrix */
+.dealer-matrix-category-strip{margin:14px 0 4px}
+.dealer-matrix-wrap{overflow:hidden}
+.dealer-matrix-scroll{overflow:auto;border:1px solid var(--line);border-radius:20px;background:#fff;max-width:100%}
+.dealer-matrix-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:14px;line-height:1.25}
+.dealer-matrix-table th,.dealer-matrix-table td{border-bottom:1px solid #ececf1;padding:0;background:#fff;vertical-align:middle}
+.dealer-matrix-table thead th{position:sticky;top:0;z-index:3;background:#f8f8fa;color:#5f6675;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;padding:12px 10px;white-space:nowrap}
+.dealer-matrix-table tbody tr:hover td{background:#fbfcff}
+.dealer-matrix-table tbody tr:last-child td{border-bottom:none}
+.dealer-matrix-sticky-col{position:sticky;left:0;z-index:2;min-width:280px;max-width:280px;background:#fff}
+.dealer-matrix-sticky-retail{position:sticky;left:280px;z-index:2;min-width:140px;max-width:140px;background:#fff}
+.dealer-matrix-table thead .dealer-matrix-sticky-col,.dealer-matrix-table thead .dealer-matrix-sticky-retail{z-index:4;background:#f3f4f7}
+.dealer-matrix-product{position:sticky;left:0;z-index:1;min-width:280px;max-width:280px;padding:10px 12px !important;background:#fff}
+.dealer-matrix-retail{position:sticky;left:280px;z-index:1;min-width:140px;max-width:140px;padding:10px 12px !important;background:#fff;font-weight:800;color:#111827;white-space:nowrap}
+.dealer-matrix-name{font-weight:700;color:#111827}
+.dealer-matrix-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.dealer-matrix-col-head{min-width:140px;text-align:center}
+.dealer-matrix-col-head small{display:block;margin-top:4px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;text-transform:none}
+.dealer-matrix-cell{min-width:140px;padding:6px 8px !important}
+.dealer-matrix-cell input{min-height:38px;border-radius:12px;text-align:center;font-weight:700;padding:8px 10px}
+.dealer-matrix-flash{animation:dealerMatrixFlash 1.2s ease}
+@keyframes dealerMatrixFlash{0%{background:#eef7b4}100%{background:transparent}}
+@media (max-width:760px){
+  .dealer-matrix-table{font-size:13px}
+  .dealer-matrix-sticky-col,.dealer-matrix-product{min-width:220px;max-width:220px}
+  .dealer-matrix-sticky-retail,.dealer-matrix-retail{left:220px;min-width:110px;max-width:110px}
+  .dealer-matrix-col-head,.dealer-matrix-cell{min-width:118px}
+  .dealer-matrix-cell input{min-height:36px;padding:7px 8px}
+}
