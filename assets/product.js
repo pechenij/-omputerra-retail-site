@@ -45,6 +45,9 @@ function statusClass(item) {
 function getId() {
   return new URLSearchParams(location.search).get('id');
 }
+function wantsDealerView() {
+  return new URLSearchParams(location.search).get('dealer') === '1';
+}
 async function loadConfig() {
   return await safeFetchJson('data/site-config.json') || window.KOMPUTERRA_DEFAULT_CONFIG || {};
 }
@@ -52,13 +55,18 @@ function fallbackProducts() {
   return (window.KOMPUTERRA_DEFAULT_PRODUCTS || []).filter(item => !item.hiddenByAdmin && !item.hiddenBySheet);
 }
 async function loadProduct(id) {
+  if (wantsDealerView() && window.KOMPUTERRA_DEALER_AUTH) {
+    const dealerItem = await window.KOMPUTERRA_DEALER_AUTH.fetchProduct(id).catch(() => null);
+    if (dealerItem) return { item: dealerItem, dealerMode: true };
+  }
   if (window.KOMPUTERRA_fetchSupabaseProductById) {
     const remote = await window.KOMPUTERRA_fetchSupabaseProductById(id);
-    if (remote) return remote;
+    if (remote) return { item: remote, dealerMode: false };
   }
-  return fallbackProducts().find(item => item.id === id) || null;
+  const fallback = fallbackProducts().find(item => item.id === id) || null;
+  return { item: fallback, dealerMode: false };
 }
-function fill(item, config) {
+function fill(item, config, dealerMode) {
   document.title = `${item.name} — КОМПУТЕРРА`;
   document.querySelector('[data-product-name]').textContent = item.name;
   document.querySelector('[data-product-model]').textContent = item.model || '';
@@ -70,6 +78,12 @@ function fill(item, config) {
   badge.textContent = statusText(item);
   badge.className = `badge ${statusClass(item)}`;
   document.querySelector('[data-product-price]').textContent = formatPrice(item.price);
+  const dealerBox = document.querySelector('[data-dealer-price-box]');
+  const dealerPriceNode = document.querySelector('[data-product-dealer-price]');
+  if (dealerMode && dealerBox && dealerPriceNode) {
+    dealerBox.classList.remove('hidden');
+    dealerPriceNode.textContent = formatPrice(item.dealerPrice || item.price);
+  }
   const img = document.querySelector('[data-product-image]');
   img.src = item.image || 'assets/placeholder-inverter.svg';
   img.alt = item.name;
@@ -85,16 +99,18 @@ function fill(item, config) {
   document.querySelectorAll('[data-phone-display]').forEach(el => el.textContent = config.phoneDisplay || '096 044 64 46');
   document.querySelectorAll('[data-phone-href]').forEach(el => el.href = config.phoneHref || 'tel:+380960446446');
   document.querySelectorAll('[data-address]').forEach(el => el.textContent = config.address || 'м. Світловодськ, вул. Городоцька, 13');
+  const back = document.querySelector('.back-link');
+  if (dealerMode) back.href = 'dealer-portal.html';
 }
 async function boot() {
   initMobileMenu();
   const id = getId();
   const config = await loadConfig();
-  const item = await loadProduct(id);
+  const { item, dealerMode } = await loadProduct(id);
   if (!item) {
     document.querySelector('[data-product-root]').innerHTML = '<div class="panel-card"><p>Товар не знайдено.</p></div>';
     return;
   }
-  fill(item, config);
+  fill(item, config, dealerMode);
 }
 boot();

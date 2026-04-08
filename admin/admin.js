@@ -3,7 +3,11 @@ const ADMIN_EMAIL = 'compadmin@komputerra.local';
 const SESSION_KEY = 'komputerra_admin_supabase_session_v1';
 const CATEGORY_ALL = 'Усі товари';
 let products = [];
+let dealers = [];
+let dealerPrices = [];
 let currentEditId = null;
+let currentDealerId = null;
+let currentDealerEditId = null;
 let activeCategory = CATEGORY_ALL;
 let authSession = null;
 
@@ -11,9 +15,12 @@ function getConfig() {
   return window.KOMPUTERRA_SUPABASE_CONFIG || { url: '', anonKey: '', table: 'products' };
 }
 
-function getRestUrl() {
-  const cfg = getConfig();
-  return cfg.url.replace(/\/$/, '') + '/rest/v1/' + (cfg.table || 'products');
+function restBase() {
+  return getConfig().url.replace(/\/$/, '') + '/rest/v1/';
+}
+
+function tableUrl(table) {
+  return restBase() + table;
 }
 
 function slugify(text) {
@@ -42,7 +49,14 @@ function saveFeedback(text, isError = false) {
   node.style.color = isError ? '#b42318' : '';
 }
 
-function toPayload(form) {
+function saveDealerFeedback(text, isError = false) {
+  const node = document.querySelector('[data-dealer-save-feedback]');
+  if (!node) return;
+  node.textContent = text || '';
+  node.style.color = isError ? '#b42318' : '';
+}
+
+function toProductPayload(form) {
   const fd = new FormData(form);
   const name = String(fd.get('name') || '').trim();
   const brand = String(fd.get('brand') || '').trim();
@@ -68,13 +82,30 @@ function toPayload(form) {
   };
 }
 
+function toDealerPayload(form) {
+  const fd = new FormData(form);
+  return {
+    name: String(fd.get('name') || '').trim(),
+    login: String(fd.get('login') || '').trim(),
+    password: String(fd.get('password') || '').trim(),
+    is_active: form.isActive.checked,
+    updated_at: new Date().toISOString()
+  };
+}
+
 function setFormMode(title, item) {
   currentEditId = item?.id || null;
   document.querySelector('[data-form-title]').textContent = title;
   saveFeedback('');
 }
 
-function resetForm() {
+function setDealerFormMode(title, item) {
+  currentDealerEditId = item?.id || null;
+  document.querySelector('[data-dealer-form-title]').textContent = title;
+  saveDealerFeedback('');
+}
+
+function resetProductForm() {
   const form = document.forms.productForm;
   form.reset();
   form.category.value = 'однофазні інвертори';
@@ -84,7 +115,14 @@ function resetForm() {
   setFormMode('Додати товар', null);
 }
 
-function fillForm(item) {
+function resetDealerForm() {
+  const form = document.forms.dealerForm;
+  form.reset();
+  form.isActive.checked = true;
+  setDealerFormMode('Додати дилера', null);
+}
+
+function fillProductForm(item) {
   const form = document.forms.productForm;
   form.name.value = item.name || '';
   form.model.value = item.model || '';
@@ -102,6 +140,58 @@ function fillForm(item) {
   form.isActive.checked = item.isActive !== false && !item.hiddenByAdmin;
   setFormMode('Редагувати товар', item);
   document.getElementById('product-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function fillDealerForm(item) {
+  const form = document.forms.dealerForm;
+  form.name.value = item.name || '';
+  form.login.value = item.login || '';
+  form.password.value = item.password || '';
+  form.isActive.checked = item.isActive !== false;
+  setDealerFormMode('Редагувати дилера', item);
+  document.getElementById('dealer-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function mapProduct(row) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    category: row.category || '',
+    brand: row.brand || '',
+    model: row.model || '',
+    name: row.name || '',
+    specs: row.specs || '',
+    description: row.description || '',
+    price: Number(row.price || 0),
+    warranty: row.warranty || '',
+    status: row.status || 'в наявності',
+    eta: row.eta || '',
+    image: row.image_url || '',
+    pdf: row.pdf_url || '',
+    hiddenByAdmin: !!row.hidden_by_admin,
+    isActive: row.is_active !== false,
+    sortOrder: Number(row.sort_order || 0)
+  };
+}
+
+function mapDealer(row) {
+  return {
+    id: row.id,
+    name: row.name || '',
+    login: row.login || '',
+    password: row.password || '',
+    isActive: row.is_active !== false,
+    createdAt: row.created_at || ''
+  };
+}
+
+function mapDealerPrice(row) {
+  return {
+    id: row.id,
+    dealerId: row.dealer_id,
+    productId: row.product_id,
+    dealerPrice: Number(row.dealer_price || 0)
+  };
 }
 
 function renderCategories() {
@@ -148,7 +238,7 @@ function renderProducts() {
   list.querySelectorAll('[data-edit-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = products.find(x => x.id === btn.dataset.editId);
-      if (item) fillForm(item);
+      if (item) fillProductForm(item);
     });
   });
 
@@ -162,13 +252,13 @@ function renderProducts() {
         : confirm(`Приховати товар "${item.name}" з роздрібного сайту?`);
       if (!okay) return;
       try {
-        await patchProduct(item.id, {
+        await patchRow('products', item.id, {
           hidden_by_admin: !restore,
           is_active: restore,
           updated_at: new Date().toISOString()
         });
         await loadProducts();
-        if (!restore && currentEditId === item.id) resetForm();
+        if (!restore && currentEditId === item.id) resetProductForm();
       } catch (error) {
         alert('Не вдалося оновити товар: ' + error.message);
       }
@@ -176,26 +266,69 @@ function renderProducts() {
   });
 }
 
-function mapRow(row) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    category: row.category || '',
-    brand: row.brand || '',
-    model: row.model || '',
-    name: row.name || '',
-    specs: row.specs || '',
-    description: row.description || '',
-    price: Number(row.price || 0),
-    warranty: row.warranty || '',
-    status: row.status || 'в наявності',
-    eta: row.eta || '',
-    image: row.image_url || '',
-    pdf: row.pdf_url || '',
-    hiddenByAdmin: !!row.hidden_by_admin,
-    isActive: row.is_active !== false,
-    sortOrder: Number(row.sort_order || 0)
-  };
+function renderDealers() {
+  const list = document.querySelector('[data-dealer-list]');
+  if (!dealers.length) {
+    list.innerHTML = '<div class="admin-empty"><p>Дилерів поки немає.</p></div>';
+    return;
+  }
+  list.innerHTML = dealers.map(item => `
+    <div class="admin-item ${item.isActive ? '' : 'is-sheet-hidden'}">
+      <div class="admin-item-main">
+        <h3>${item.name}</h3>
+        <p>Логін: ${item.login}</p>
+        <p>${item.isActive ? 'активний' : 'вимкнений'}</p>
+      </div>
+      <div class="admin-actions admin-actions--inline">
+        <button class="btn" type="button" data-prices-id="${item.id}">Ціни</button>
+        <button class="btn primary" type="button" data-edit-dealer-id="${item.id}">Редагувати</button>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-edit-dealer-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = dealers.find(x => x.id === btn.dataset.editDealerId);
+      if (item) fillDealerForm(item);
+    });
+  });
+
+  list.querySelectorAll('[data-prices-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentDealerId = btn.dataset.pricesId;
+      renderDealerPrices();
+      document.querySelector('.dealer-prices-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+function renderDealerPrices() {
+  const title = document.querySelector('[data-price-panel-title]');
+  const subtitle = document.querySelector('[data-price-panel-subtitle]');
+  const list = document.querySelector('[data-dealer-prices-list]');
+  const saveBtn = document.querySelector('[data-save-dealer-prices]');
+  if (!currentDealerId) {
+    title.textContent = 'Оберіть дилера';
+    subtitle.textContent = 'Для товарів без індивідуальної ціни дилер побачить роздрібну ціну.';
+    list.innerHTML = '<div class="admin-empty"><p>Оберіть дилера у списку праворуч, щоб задати індивідуальні ціни.</p></div>';
+    saveBtn.disabled = true;
+    return;
+  }
+  const dealer = dealers.find(d => d.id === currentDealerId);
+  const map = new Map(dealerPrices.filter(x => x.dealerId === currentDealerId).map(x => [x.productId, x.dealerPrice]));
+  title.textContent = `Ціни дилера: ${dealer?.name || ''}`;
+  subtitle.textContent = `Логін дилера: ${dealer?.login || ''}. Порожнє поле = дилер бачить роздрібну ціну.`;
+  list.innerHTML = products.map(item => `
+    <div class="dealer-price-row">
+      <div>
+        <div class="dealer-price-name">${item.name}</div>
+        <div class="dealer-price-meta">${item.category} · Роздріб: ${formatPrice(item.price)}</div>
+      </div>
+      <div class="note">Роздріб: <strong>${formatPrice(item.price)}</strong></div>
+      <div><input type="number" min="0" step="1" data-dealer-price-input data-product-id="${item.id}" value="${map.has(item.id) ? map.get(item.id) : ''}" placeholder="роздрібна"></div>
+    </div>
+  `).join('');
+  saveBtn.disabled = false;
 }
 
 async function signInWithPassword(password) {
@@ -229,20 +362,44 @@ function getAuthHeaders() {
   };
 }
 
-async function loadProducts() {
-  const endpoint = new URL(getRestUrl());
-  endpoint.searchParams.set('select', 'id,slug,category,brand,model,name,specs,description,price,warranty,status,eta,image_url,pdf_url,is_active,hidden_by_admin,sort_order');
-  endpoint.searchParams.set('order', 'sort_order.asc.nullslast,name.asc');
+async function fetchRows(table, queryBuilder) {
+  const endpoint = new URL(tableUrl(table));
+  if (queryBuilder) queryBuilder(endpoint.searchParams);
   const res = await fetch(endpoint.toString(), { headers: getAuthHeaders() });
   const rows = await res.json().catch(() => []);
-  if (!res.ok) throw new Error((rows && rows.message) || 'Не вдалося завантажити товари');
-  products = Array.isArray(rows) ? rows.map(mapRow) : [];
+  if (!res.ok) throw new Error((rows && rows.message) || 'Не вдалося завантажити дані');
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function loadProducts() {
+  const rows = await fetchRows('products', (p) => {
+    p.set('select', 'id,slug,category,brand,model,name,specs,description,price,warranty,status,eta,image_url,pdf_url,is_active,hidden_by_admin,sort_order');
+    p.set('order', 'sort_order.asc.nullslast,name.asc');
+  });
+  products = rows.map(mapProduct);
   renderCategories();
   renderProducts();
 }
 
-async function patchProduct(id, payload) {
-  const endpoint = new URL(getRestUrl());
+async function loadDealers() {
+  const rows = await fetchRows('dealers', (p) => {
+    p.set('select', 'id,name,login,password,is_active,created_at');
+    p.set('order', 'name.asc');
+  });
+  dealers = rows.map(mapDealer);
+  renderDealers();
+}
+
+async function loadDealerPrices() {
+  const rows = await fetchRows('dealer_prices', (p) => {
+    p.set('select', 'id,dealer_id,product_id,dealer_price');
+  });
+  dealerPrices = rows.map(mapDealerPrice);
+  renderDealerPrices();
+}
+
+async function patchRow(table, id, payload) {
+  const endpoint = new URL(tableUrl(table));
   endpoint.searchParams.set('id', 'eq.' + id);
   const res = await fetch(endpoint.toString(), {
     method: 'PATCH',
@@ -254,8 +411,8 @@ async function patchProduct(id, payload) {
   return data;
 }
 
-async function insertProduct(payload) {
-  const res = await fetch(getRestUrl(), {
+async function insertRow(table, payload) {
+  const res = await fetch(tableUrl(table), {
     method: 'POST',
     headers: { ...getAuthHeaders(), Prefer: 'return=representation' },
     body: JSON.stringify(payload)
@@ -265,10 +422,35 @@ async function insertProduct(payload) {
   return data;
 }
 
-async function handleSave(e) {
+async function upsertRows(table, payload) {
+  const res = await fetch(tableUrl(table), {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data && data.message) || 'UPSERT failed');
+  return data;
+}
+
+async function deleteDealerPrice(dealerId, productId) {
+  const endpoint = new URL(tableUrl('dealer_prices'));
+  endpoint.searchParams.set('dealer_id', 'eq.' + dealerId);
+  endpoint.searchParams.set('product_id', 'eq.' + productId);
+  const res = await fetch(endpoint.toString(), {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || 'DELETE failed');
+  }
+}
+
+async function handleProductSave(e) {
   e.preventDefault();
   const form = e.currentTarget;
-  const payload = toPayload(form);
+  const payload = toProductPayload(form);
   if (!payload.name || !payload.model || !payload.brand) {
     saveFeedback('Заповни назву, модель і бренд.', true);
     return;
@@ -276,16 +458,78 @@ async function handleSave(e) {
   try {
     saveFeedback('Зберігаю...');
     if (currentEditId) {
-      await patchProduct(currentEditId, payload);
+      await patchRow('products', currentEditId, payload);
       saveFeedback('Товар оновлено в Supabase.');
     } else {
-      await insertProduct(payload);
+      await insertRow('products', payload);
       saveFeedback('Новий товар додано в Supabase.');
     }
     await loadProducts();
-    resetForm();
+    resetProductForm();
+    renderDealerPrices();
   } catch (error) {
     saveFeedback(error.message || 'Не вдалося зберегти товар.', true);
+  }
+}
+
+async function handleDealerSave(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const payload = toDealerPayload(form);
+  if (!payload.name || !payload.login || !payload.password) {
+    saveDealerFeedback("Заповни ім'я, логін і пароль.", true);
+    return;
+  }
+  try {
+    saveDealerFeedback('Зберігаю дилера...');
+    if (currentDealerEditId) {
+      await patchRow('dealers', currentDealerEditId, payload);
+      saveDealerFeedback('Дилера оновлено.');
+    } else {
+      payload.created_at = new Date().toISOString();
+      await insertRow('dealers', payload);
+      saveDealerFeedback('Нового дилера додано.');
+    }
+    await loadDealers();
+    resetDealerForm();
+  } catch (error) {
+    saveDealerFeedback(error.message || 'Не вдалося зберегти дилера.', true);
+  }
+}
+
+async function saveDealerPrices() {
+  if (!currentDealerId) return;
+  const inputs = [...document.querySelectorAll('[data-dealer-price-input]')];
+  const existing = dealerPrices.filter(x => x.dealerId === currentDealerId);
+  const existingMap = new Map(existing.map(x => [x.productId, x]));
+  const upserts = [];
+  const deletes = [];
+  inputs.forEach(input => {
+    const productId = input.dataset.productId;
+    const raw = String(input.value || '').trim();
+    if (!raw) {
+      if (existingMap.has(productId)) deletes.push(productId);
+      return;
+    }
+    upserts.push({
+      dealer_id: currentDealerId,
+      product_id: productId,
+      dealer_price: Number(raw)
+    });
+  });
+  const btn = document.querySelector('[data-save-dealer-prices]');
+  btn.textContent = 'Зберігаємо...';
+  try {
+    if (upserts.length) await upsertRows('dealer_prices', upserts);
+    for (const productId of deletes) {
+      await deleteDealerPrice(currentDealerId, productId);
+    }
+    await loadDealerPrices();
+    btn.textContent = 'Зберегти ціни';
+    alert('Дилерські ціни оновлено.');
+  } catch (error) {
+    btn.textContent = 'Зберегти ціни';
+    alert('Не вдалося зберегти ціни: ' + error.message);
   }
 }
 
@@ -296,8 +540,9 @@ function togglePanel(isOpen) {
 
 async function afterLogin() {
   togglePanel(true);
-  await loadProducts();
-  resetForm();
+  await Promise.all([loadProducts(), loadDealers(), loadDealerPrices()]);
+  resetProductForm();
+  resetDealerForm();
 }
 
 function logout() {
@@ -311,7 +556,7 @@ async function tryRestoreSession() {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return false;
     authSession = JSON.parse(raw);
-    await loadProducts();
+    await Promise.all([loadProducts(), loadDealers(), loadDealerPrices()]);
     togglePanel(true);
     return true;
   } catch (error) {
@@ -340,9 +585,12 @@ function initLogin() {
 }
 
 function initAdmin() {
-  document.forms.productForm.addEventListener('submit', handleSave);
-  document.querySelector('[data-reset-form]').addEventListener('click', resetForm);
+  document.forms.productForm.addEventListener('submit', handleProductSave);
+  document.querySelector('[data-reset-form]').addEventListener('click', resetProductForm);
+  document.forms.dealerForm.addEventListener('submit', handleDealerSave);
+  document.querySelector('[data-reset-dealer-form]').addEventListener('click', resetDealerForm);
   document.querySelector('[data-logout]').addEventListener('click', logout);
+  document.querySelector('[data-save-dealer-prices]').addEventListener('click', saveDealerPrices);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

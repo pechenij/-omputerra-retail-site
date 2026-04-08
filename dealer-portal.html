@@ -1,25 +1,25 @@
-
 <!doctype html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>КОМПУТЕРРА — Каталог-прайс</title>
+  <title>Дилерський портал — КОМПУТЕРРА</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body>
+<body class="dealer-portal-page">
   <div class="site-shell">
     <header class="site-header">
       <div class="container inner">
-        <a class="brand" href="index.html">
+        <a class="brand" href="dealer-portal.html">
           <img src="assets/logo.png" alt="КОМПУТЕРРА">
           <div class="brand-copy">
             <span class="kicker">КОМПУТЕРРА</span>
-            <span class="page-title">Каталог-прайс</span>
+            <span class="page-title">Дилерський портал</span>
           </div>
         </a>
         <div class="header-actions">
-          <a class="header-login-btn" href="dealer-login.html">Увійти</a>
+          <div class="dealer-chip" data-dealer-name>Дилер</div>
+          <button class="header-login-btn" type="button" data-dealer-logout>Вийти</button>
           <button class="burger-btn" type="button" data-menu-toggle aria-label="Відкрити меню" aria-expanded="false">
             <span></span><span></span><span></span>
           </button>
@@ -29,23 +29,14 @@
 
     <div class="mobile-menu" data-mobile-menu>
       <div class="mobile-menu-panel">
-        <a class="mobile-menu-link" href="index.html">Каталог товарів</a>
-        <a class="mobile-menu-link" href="dealer-login.html">Увійти</a>
+        <a class="mobile-menu-link" href="dealer-portal.html">Каталог дилера</a>
+        <a class="mobile-menu-link" href="index.html">Роздрібний сайт</a>
+        <a class="mobile-menu-link" href="#" data-mobile-logout>Вийти</a>
       </div>
     </div>
 
     <main>
-      <section class="hero">
-        <div class="container">
-          <div class="hero-card">
-            <span class="kicker">Системи резервного живлення та СЕС</span>
-            <h1>Каталог обладнання для дому та бізнесу.</h1>
-            <p>Інвертори, акумулятори та сонячні панелі з актуальними роздрібними цінами, гарантією та статусом наявності.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="toolbar">
+      <section class="toolbar" style="padding-top:18px">
         <div class="container">
           <div class="search-box">
             <input data-search type="search" placeholder="Пошук за назвою, брендом або моделлю">
@@ -62,19 +53,19 @@
       <section class="catalog">
         <div class="container">
           <div class="meta-row">
-            <h2>Каталог товарів</h2>
+            <h2>Каталог дилера</h2>
             <div class="meta-muted" data-count></div>
           </div>
           <p class="sync-note" data-sync-note></p>
 
-          <table class="catalog-table">
+          <table class="catalog-table dealer-table">
             <thead>
               <tr>
                 <th>Категорія</th>
                 <th>Назва та модель</th>
                 <th>Характеристики</th>
-                <th>Ціна, грн</th>
-                <th>Гарантія</th>
+                <th>Роздрібна ціна</th>
+                <th>Ціна дилера</th>
                 <th>Наявність</th>
               </tr>
             </thead>
@@ -85,25 +76,9 @@
         </div>
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="container">
-        <div class="footer-card">
-          <div class="footer-left">
-            <img src="assets/logo.png" alt="КОМПУТЕРРА">
-            <div class="footer-copy">
-              <div class="page-title">КОМПУТЕРРА</div>
-              <small data-address>м. Світловодськ, вул. Городоцька, 13</small>
-            </div>
-          </div>
-          <a class="cta-phone" data-phone-href href="tel:+380960446446">Подзвонити: <span data-phone-display style="margin-left:8px">096 044 64 46</span></a>
-        </div>
-      </div>
-    </footer>
   </div>
-  <script src="assets/default-data.js"></script>
   <script src="assets/supabase-config.js"></script>
-  <script src="assets/supabase-data.js"></script>
-  <script src="assets/main.js"></script>
+  <script src="assets/dealer-auth.js"></script>
+  <script src="assets/dealer-portal.js"></script>
 </body>
 </html>

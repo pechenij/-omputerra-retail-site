@@ -17,14 +17,18 @@
           <span class="page-title">Каталог-прайс</span>
         </div>
       </a>
-      <button class="burger-btn" type="button" data-menu-toggle aria-label="Відкрити меню" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <div class="header-actions">
+        <a class="header-login-btn" href="dealer-login.html">Увійти</a>
+        <button class="burger-btn" type="button" data-menu-toggle aria-label="Відкрити меню" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </header>
   <div class="mobile-menu" data-mobile-menu>
     <div class="mobile-menu-panel">
       <a class="mobile-menu-link" href="index.html">Каталог товарів</a>
+      <a class="mobile-menu-link" href="dealer-login.html">Увійти</a>
     </div>
   </div>
   <main class="product-hero">
@@ -48,6 +52,7 @@
             <div class="spec-box"><div class="item-key">Гарантія</div><div data-product-warranty></div></div>
             <div class="spec-box"><div class="item-key">Наявність</div><div><span class="badge" data-product-status></span></div></div>
             <div class="spec-box price-box"><div class="item-key">Роздрібна ціна</div><div class="price" data-product-price></div></div>
+            <div class="spec-box price-box hidden" data-dealer-price-box><div class="item-key">Ціна дилера</div><div class="price dealer-own-price" data-product-dealer-price></div></div>
           </div>
 
           <div class="product-actions">
@@ -75,6 +80,7 @@
   <script src="assets/default-data.js"></script>
   <script src="assets/supabase-config.js"></script>
   <script src="assets/supabase-data.js"></script>
+  <script src="assets/dealer-auth.js"></script>
   <script src="assets/product.js"></script>
 </body>
 </html>

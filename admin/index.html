@@ -22,7 +22,7 @@
           <label><span>Пароль</span><input type="password" name="password" required autocomplete="current-password"></label>
           <button class="btn primary" type="submit">Увійти</button>
         </form>
-        <p class="note" style="margin-top:14px">Вхід тепер працює через Supabase Auth. Використовуй логін <strong>compadmin</strong> і пароль, який ми для нього задали.</p>
+        <p class="note" style="margin-top:14px">Вхід працює через Supabase Auth. Використовуй логін <strong>compadmin</strong> та пароль <strong>2V66htmPFf</strong>.</p>
       </div>
     </div>
 
@@ -87,6 +87,47 @@
             <h2 style="margin:8px 0 14px">Список позицій</h2>
             <div class="category-strip admin-category-strip" data-admin-categories></div>
             <div class="admin-list" data-product-list></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-grid" style="margin-top:18px">
+        <div class="panel-card" id="dealer-editor">
+          <span class="kicker">Дилер</span>
+          <h2 data-dealer-form-title style="margin:8px 0 8px">Додати дилера</h2>
+          <p class="note" style="margin:0 0 18px">Логін і пароль дилера зберігаються у Supabase. Далі цим логіном дилер входить на портал.</p>
+          <form name="dealerForm" class="form-stack">
+            <label><span>Ім'я дилера</span><input type="text" name="name" required></label>
+            <label><span>Логін</span><input type="text" name="login" required></label>
+            <label><span>Пароль</span><input type="text" name="password" required></label>
+            <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="isActive" checked style="width:auto;min-width:0"> <span>Активний дилер</span></label>
+            <div class="admin-actions">
+              <button class="btn primary" type="submit">Зберегти дилера</button>
+              <button class="btn" type="button" data-reset-dealer-form>Очистити</button>
+            </div>
+            <p class="note" data-dealer-save-feedback style="margin:0"></p>
+          </form>
+        </div>
+
+        <div>
+          <div class="panel-card">
+            <span class="kicker">Дилери</span>
+            <h2 style="margin:8px 0 14px">Список дилерів</h2>
+            <div class="admin-list" data-dealer-list></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-grid admin-grid--full" style="margin-top:18px">
+        <div class="panel-card dealer-prices-panel">
+          <span class="kicker">Дилерські ціни</span>
+          <h2 style="margin:8px 0 6px" data-price-panel-title>Оберіть дилера</h2>
+          <p class="admin-subtitle" data-price-panel-subtitle>Для товарів без індивідуальної ціни дилер побачить роздрібну ціну.</p>
+          <div class="admin-actions" style="margin-top:14px;margin-bottom:10px">
+            <button class="btn primary" type="button" data-save-dealer-prices disabled>Зберегти ціни</button>
+          </div>
+          <div class="admin-list" data-dealer-prices-list>
+            <div class="admin-empty"><p>Оберіть дилера у списку праворуч, щоб задати індивідуальні ціни.</p></div>
           </div>
         </div>
       </div>
