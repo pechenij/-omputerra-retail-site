@@ -137,7 +137,7 @@ function renderCatalog() {
 
 async function logoutEverywhere() {
   await window.KOMPUTERRA_DEALER_AUTH.logout();
-  location.href = 'dealer-login.html';
+  location.href = 'index.html';
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

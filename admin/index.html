@@ -22,7 +22,6 @@
           <label><span>Пароль</span><input type="password" name="password" required autocomplete="current-password"></label>
           <button class="btn primary" type="submit">Увійти</button>
         </form>
-        <p class="note" style="margin-top:14px">Вхід працює через Supabase Auth. Використовуй логін <strong>compadmin</strong> та пароль <strong>2V66htmPFf</strong>.</p>
       </div>
     </div>
 
@@ -80,11 +79,8 @@
         <div class="panel-card dealer-prices-panel" id="dealer-prices-panel">
           <span class="kicker">Дилерські ціни</span>
           <h2 style="margin:8px 0 6px" data-price-panel-title>Матриця дилерських цін</h2>
-          <p class="admin-subtitle" data-price-panel-subtitle>Один рядок = один товар. Порожня клітинка = дилер бачить роздрібну ціну.</p>
+          <p class="admin-subtitle" data-price-panel-subtitle>Перегляд цін. Редагування виконується в Supabase → Table Editor → dealer_price_matrix.</p>
           <div class="category-strip admin-category-strip dealer-matrix-category-strip" data-dealer-matrix-categories></div>
-          <div class="admin-actions" style="margin-top:14px;margin-bottom:10px">
-            <button class="btn primary" type="button" data-save-dealer-prices disabled>Зберегти матрицю цін</button>
-          </div>
           <div class="dealer-matrix-wrap" data-dealer-prices-list>
             <div class="admin-empty"><p>Додай хоча б одного дилера, щоб побачити матрицю цін.</p></div>
           </div>

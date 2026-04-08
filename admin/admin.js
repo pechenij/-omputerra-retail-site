@@ -6,7 +6,6 @@ let products = [];
 let dealers = [];
 let dealerPrices = [];
 let currentEditId = null;
-let currentDealerId = null;
 let currentDealerEditId = null;
 let activeCategory = CATEGORY_ALL;
 let activeDealerMatrixCategory = CATEGORY_ALL;
@@ -69,8 +68,6 @@ function renderDealerPricesSetupNotice(message) {
   const list = document.querySelector('[data-dealer-prices-list]');
   if (!list) return;
   list.innerHTML = `<div class="admin-empty admin-warning"><p>${message}</p></div>`;
-  const saveBtn = document.querySelector('[data-save-dealer-prices]');
-  if (saveBtn) saveBtn.disabled = true;
 }
 
 function toProductPayload(form) {
@@ -323,6 +320,7 @@ function renderDealers() {
       <div class="admin-actions admin-actions--inline">
         <button class="btn" type="button" data-focus-dealer-id="${item.id}">Показати колонку</button>
         <button class="btn primary" type="button" data-edit-dealer-id="${item.id}">Редагувати</button>
+        <button class="btn" type="button" data-delete-dealer-id="${item.id}">Видалити</button>
       </div>
     </div>
   `).join('');
@@ -331,6 +329,23 @@ function renderDealers() {
     btn.addEventListener('click', () => {
       const item = dealers.find(x => x.id === btn.dataset.editDealerId);
       if (item) fillDealerForm(item);
+    });
+  });
+
+  list.querySelectorAll('[data-delete-dealer-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const item = dealers.find(x => x.id === btn.dataset.deleteDealerId);
+      if (!item) return;
+      const ok = confirm(`Видалити дилера "${item.name}"? Разом із дилером будуть видалені й його індивідуальні ціни.`);
+      if (!ok) return;
+      try {
+        await deleteRow('dealers', item.id);
+        await loadDealers();
+        await loadDealerPrices();
+        if (currentDealerEditId === item.id) resetDealerForm();
+      } catch (error) {
+        alert('Не вдалося видалити дилера: ' + error.message);
+      }
     });
   });
 
@@ -352,26 +367,23 @@ function renderDealerPrices() {
   const title = document.querySelector('[data-price-panel-title]');
   const subtitle = document.querySelector('[data-price-panel-subtitle]');
   const list = document.querySelector('[data-dealer-prices-list]');
-  const saveBtn = document.querySelector('[data-save-dealer-prices]');
   if (!dealerPricesReady || !dealersReady) {
-    renderDealerPricesSetupNotice('Щоб керувати дилерськими цінами, спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
+    renderDealerPricesSetupNotice('Щоб бачити дилерські ціни, спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase. Редагування виконується в dealer_price_matrix.');
     return;
   }
   if (!dealers.length) {
     title.textContent = 'Матриця дилерських цін';
     subtitle.textContent = 'Спочатку додай хоча б одного дилера — тоді тут з’являться колонки з цінами.';
     list.innerHTML = '<div class="admin-empty"><p>Додай хоча б одного дилера, щоб побачити матрицю цін.</p></div>';
-    saveBtn.disabled = true;
     return;
   }
   const visibleProducts = getVisibleMatrixProducts();
   if (!visibleProducts.length) {
     list.innerHTML = '<div class="admin-empty"><p>У цій категорії поки немає товарів.</p></div>';
-    saveBtn.disabled = true;
     return;
   }
   title.textContent = 'Матриця дилерських цін';
-  subtitle.textContent = 'Порожня клітинка = дилер бачить роздрібну ціну. Усі ціни видно в одній таблиці.';
+  subtitle.textContent = 'Перегляд цін з бази. Редагування виконується в Supabase → Table Editor → dealer_price_matrix.';
   const map = new Map(dealerPrices.map(x => [`${x.dealerId}::${x.productId}`, x.dealerPrice]));
 
   const headDealers = dealers.map(d => `
@@ -397,6 +409,8 @@ function renderDealerPrices() {
             value="${value}"
             placeholder="${item.price}"
             aria-label="${d.name} — ${item.name}"
+            readonly
+            disabled
           >
         </td>
       `;
@@ -428,7 +442,6 @@ function renderDealerPrices() {
       </table>
     </div>
   `;
-  saveBtn.disabled = false;
 }
 
 async function signInWithPassword(password) {
@@ -509,7 +522,7 @@ async function loadDealerPrices() {
   } catch (error) {
     dealerPricesReady = false;
     dealerPrices = [];
-    renderDealerPricesSetupNotice('Таблиця дилерських цін ще не підключена. Після запуску SUPABASE-DEALERS-SETUP.sql цей блок запрацює автоматично.');
+    renderDealerPricesSetupNotice('Таблиця дилерських цін ще не підключена. Після запуску SUPABASE-DEALERS-SETUP.sql та SUPABASE-DEALER-MATRIX-SETUP.sql цей блок запрацює автоматично.');
   }
 }
 
@@ -535,6 +548,19 @@ async function insertRow(table, payload) {
   const data = await res.json().catch(() => []);
   if (!res.ok) throw new Error((data && data.message) || 'POST failed');
   return data;
+}
+
+async function deleteRow(table, id) {
+  const endpoint = new URL(tableUrl(table));
+  endpoint.searchParams.set('id', 'eq.' + id);
+  const res = await fetch(endpoint.toString(), {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || 'DELETE failed');
+  }
 }
 
 async function upsertRows(table, payload) {
@@ -616,49 +642,6 @@ async function handleDealerSave(e) {
   }
 }
 
-async function saveDealerPrices() {
-  if (!dealerPricesReady || !dealersReady) {
-    alert('Спочатку виконай SUPABASE-DEALERS-SETUP.sql у Supabase.');
-    return;
-  }
-  if (!dealers.length) return;
-  const inputs = [...document.querySelectorAll('[data-dealer-price-input]')];
-  const existingMap = new Map(dealerPrices.map(x => [`${x.dealerId}::${x.productId}`, x]));
-  const upserts = [];
-  const deletes = [];
-
-  inputs.forEach(input => {
-    const dealerId = input.dataset.dealerId;
-    const productId = input.dataset.productId;
-    const raw = String(input.value || '').trim();
-    const key = `${dealerId}::${productId}`;
-    if (!raw) {
-      if (existingMap.has(key)) deletes.push({ dealerId, productId });
-      return;
-    }
-    upserts.push({
-      dealer_id: dealerId,
-      product_id: productId,
-      dealer_price: Number(raw)
-    });
-  });
-
-  const btn = document.querySelector('[data-save-dealer-prices]');
-  btn.textContent = 'Зберігаємо...';
-  try {
-    if (upserts.length) await upsertRows('dealer_prices', upserts);
-    for (const row of deletes) {
-      await deleteDealerPrice(row.dealerId, row.productId);
-    }
-    await loadDealerPrices();
-    btn.textContent = 'Зберегти матрицю цін';
-    alert('Матрицю дилерських цін оновлено.');
-  } catch (error) {
-    btn.textContent = 'Зберегти матрицю цін';
-    alert('Не вдалося зберегти матрицю: ' + error.message);
-  }
-}
-
 function togglePanel(isOpen) {
   document.querySelector('[data-login]').classList.toggle('hidden', isOpen);
   document.querySelector('[data-panel]').classList.toggle('hidden', !isOpen);
@@ -720,7 +703,6 @@ function initAdmin() {
   document.forms.dealerForm.addEventListener('submit', handleDealerSave);
   document.querySelector('[data-reset-dealer-form]').addEventListener('click', resetDealerForm);
   document.querySelector('[data-logout]').addEventListener('click', logout);
-  document.querySelector('[data-save-dealer-prices]').addEventListener('click', saveDealerPrices);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
